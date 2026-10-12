@@ -18,6 +18,7 @@ on:
       - "pyproject.toml"
       - ".github/workflows/**"
 
+# Test av concurrency - andra pushen
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
