@@ -8,6 +8,7 @@ on:
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/**"
+      - "kontroller/**"
 
   pull_request:
     branches: [main]
@@ -17,8 +18,19 @@ on:
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/**"
+      - "kontroller/**"
+
 
   workflow_dispatch:
+    inputs: 
+      datafil:
+        description: "Välj vilken kundfil som ska valideras"
+        required: true
+        default: "data/kundbas.csv"
+        type: choice
+        options:
+          - "data/kundbas.csv"
+          - "data/kundbas_ny_leverans.csv"
 
   schedule:
     - cron: "0 6 * * 1"
@@ -45,9 +57,20 @@ jobs:
 
       - run: pytest
 
+  validera_data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: python kontroller/schema.py "${{ inputs.datafil || 'data/kundbas.csv' }}"
 
   train:
-    needs: test
+    needs: [test, validera_data]
     runs-on: ubuntu-latest
 
     steps:
