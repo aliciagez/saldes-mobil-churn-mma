@@ -65,7 +65,7 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
 
       - run: python kontroller/schema.py "${{ inputs.datafil || 'data/kundbas.csv' }}"
 
