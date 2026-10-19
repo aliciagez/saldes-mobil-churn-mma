@@ -133,7 +133,7 @@ jobs:
 
 
   ringlista:
-    needs: utvardera
+    needs: versionera_modell 
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
