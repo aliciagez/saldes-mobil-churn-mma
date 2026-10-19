@@ -113,6 +113,25 @@ jobs:
           cat outputs/matvarden.json >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
+
+  versionera_modell:
+    needs: utvardera 
+    runs-on: ubuntu-latest 
+    steps:
+     - name: download validated model
+       uses: actions/download-artifact@v4
+       with:
+         name: modell-${{ github.sha }}
+         path: approved-model/
+
+     - name: save approved model version  
+       uses: actions/upload-artifact@v4
+       with:
+        name: approved-modell-${{ github.sha }}
+        path: approved-model/
+        if-no-files-found: Error 
+
+
   ringlista:
     needs: utvardera
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
