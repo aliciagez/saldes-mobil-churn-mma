@@ -125,7 +125,7 @@ jobs:
          path: approved-model/
 
      - name: save approved model version  
-       uses: actions/upload-artifact@v4
+       uses: actions/upload-artifact@v4 
        with:
         name: approved-modell-${{ github.sha }}
         path: approved-model/
