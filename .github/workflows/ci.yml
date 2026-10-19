@@ -129,7 +129,7 @@ jobs:
        with:
         name: approved-modell-${{ github.sha }}
         path: approved-model/
-        if-no-files-found: Error 
+        if-no-files-found: error 
 
 
   ringlista:
