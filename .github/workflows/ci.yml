@@ -146,7 +146,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: modell-${{ github.sha }}
+          name: approved-modell-${{ github.sha }}
           path: outputs/
 
       - run: uv run python -m churn.score
