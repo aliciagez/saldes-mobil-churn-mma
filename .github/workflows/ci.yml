@@ -42,7 +42,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -55,10 +55,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: pytest
+      - run: uv run pytest
 
   validera_data:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -67,11 +67,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: python kontroller/schema.py "${{ inputs.datafil || 'data/kundbas.csv' }}"
+      - run: uv run python kontroller/schema.py "${{ inputs.datafil || 'data/kundbas.csv' }}"
 
   train:
     needs: [test, validera_data]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -80,7 +80,7 @@ jobs:
         with:
           python-version: "3.11"  
 
-      - run: python -m churn.model
+      - run: uv run python -m churn.model
 
       - uses: actions/upload-artifact@v4
         with:
@@ -90,7 +90,7 @@ jobs:
 
   utvardera:
     needs: train
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
@@ -104,7 +104,7 @@ jobs:
           name: modell-${{ github.sha }}
           path: outputs/
 
-      - run: python -m churn.evaluate 
+      - run: uv run python -m churn.evaluate
 
       - name: Visa mätvärden i Summary
         run: |
@@ -116,7 +116,7 @@ jobs:
 
   versionera_modell:
     needs: utvardera 
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-24.04
     steps:
      - name: download validated model
        uses: actions/download-artifact@v4
@@ -135,7 +135,7 @@ jobs:
   ringlista:
     needs: versionera_modell 
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
@@ -149,7 +149,7 @@ jobs:
           name: modell-${{ github.sha }}
           path: outputs/
 
-      - run: python -m churn.score
+      - run: uv run python -m churn.score
 
       - uses: actions/upload-artifact@v4
         with:
