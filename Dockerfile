@@ -1,12 +1,13 @@
 FROM python:3.11-slim AS builder 
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /bin/uv
+
 #assuming api is i app-main.py
 WORKDIR /app
 COPY pyproject.toml /app/
 
 ENV UV_PYTHON_DOWNLOADS=0
-ENV UV_PYTHON_DOWNLOADS=0
+
 
 COPY src / ./src/
 RUN uv sync --locked --no-dev
