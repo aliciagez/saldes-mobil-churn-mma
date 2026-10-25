@@ -1,0 +1,9 @@
+.git
+.venv
+__pycache__/
+.pytest_cache/
+.env
+tests/
+data/
+!data/sample.csv
+/outputs
