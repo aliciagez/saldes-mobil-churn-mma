@@ -8,7 +8,6 @@ COPY pyproject.toml /app/
 
 ENV UV_PYTHON_DOWNLOADS=0
 
-
 COPY src / ./src/
 RUN uv sync --locked --no-dev
 COPY outputs/ outputs/
