@@ -21,11 +21,11 @@ WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
 
-COPY app/ /app/
+COPY aproved.model/ /app/aproved.model/
 
 USER app
 
 
 EXPOSE  8000
 
-CMD ["uvicorn", "app.main.app", "--host", "0.0.0.0", "--port", "8000 "]
+CMD ["uvicorn", "churn.app:app", "--host", "0.0.0.0", "--port", "8000"]
