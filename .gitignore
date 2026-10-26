@@ -28,3 +28,5 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+approved_models/
+
