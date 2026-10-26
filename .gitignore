@@ -4,6 +4,7 @@ outputs/
 # Modellfiler
 models/
 *.joblib
+approved-model/
 
 # Python
 __pycache__/

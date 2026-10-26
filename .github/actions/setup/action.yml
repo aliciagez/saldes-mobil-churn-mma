@@ -13,8 +13,12 @@ runs:
     - uses: actions/setup-python@v7
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip
-        cache-dependency-path: pyproject.toml
+
+    # Pin to a specific commit SHA for security and reproducibility.
+    # Prevents unexpected changes when an action version is updated.
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      with:
+        enable-cache: true
 
     - shell: bash
-      run: pip install -e ".[dev]"
+      run: uv sync --frozen --extra dev
