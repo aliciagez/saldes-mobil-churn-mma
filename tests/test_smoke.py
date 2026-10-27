@@ -1,6 +1,6 @@
 import requests
 
-BASE_URL = "http:/localhost:8000/"
+BASE_URL = "http://localhost:8000"
 
 def test_health():
     respose=requests.get(f"{BASE_URL}/health", timeout=5)
