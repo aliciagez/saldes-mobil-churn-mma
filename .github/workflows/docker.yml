@@ -3,94 +3,89 @@ name: Docker - Build, Smoke Test and GHCR
 on:
   workflow_call:
 
-name: Docker Build and Smoke Test
-
-on:
-  workflow_call:
-
-jobs:
+  jobs:
   build-and-smoke-test:
-    runs-on: ubuntu-24.04
+  runs-on: ubuntu-24.04
 
-    permissions:
-      contents: read
-      actions: read
+  permissions:
+    contents: read
+    actions: read
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Download approved model
-        uses: actions/download-artifact@v4
-        with:
-          name: approved-modell-${{ github.sha }}
-          path: approved-model/
+    - name: Download approved model
+      uses: actions/download-artifact@v4
+      with:
+        name: approved-modell-${{ github.sha }}
+        path: approved-model/
 
-      - name: Verify model files
-        run: |
-          test -f approved-model/modell.joblib
-          test -f approved-model/matvarden.json
+    - name: Verify model files
+      run: |
+        test -f approved-model/modell.joblib
+        test -f approved-model/matvarden.json
 
-      - name: Build Docker image
-        run: docker build -t churn-api:test .
+    - name: Build Docker image
+      run: docker build -t churn-api:test .
 
-      - name: Start Docker container
-        run: |
-          docker run -d \
-            --name churn-api \
-            -p 8000:8000 \
-            churn-api:test
+    - name: Start Docker container
+      run: |
+        docker run -d \
+          --name churn-api \
+          -p 8000:8000 \
+          churn-api:test
 
-      - name: Smoke test
-        shell: bash
-        run: |
-          set -euo pipefail
+    - name: Smoke test
+      shell: bash
+      run: |
+        set -euo pipefail
 
-          echo "Waiting for API..."
+        echo "Waiting for API..."
 
-          ready=false
+        ready=false
 
-          for i in {1..20}; do
-            if curl -fsS http://localhost:8000/health > /dev/null; then
-              ready=true
-              break
-            fi
-            sleep 2
-          done
-
-          if [ "$ready" != "true" ]; then
-            echo "API did not start"
-            exit 1
+        for i in {1..20}; do
+          if curl -fsS http://localhost:8000/health > /dev/null; then
+            ready=true
+            break
           fi
+          sleep 2
+        done
 
-          echo "Testing /health..."
+        if [ "$ready" != "true" ]; then
+          echo "API did not start"
+          exit 1
+        fi
 
-          curl -fsS http://localhost:8000/health \
-            | python -c 'import json,sys; assert json.load(sys.stdin)["status"] == "ok"'
+        echo "Testing /health..."
 
-          echo "Testing /predict..."
+        curl -fsS http://localhost:8000/health \
+          | python -c 'import json,sys; assert json.load(sys.stdin)["status"] == "ok"'
 
-          curl -fsS -X POST http://localhost:8000/predict \
-            -H "Content-Type: application/json" \
-            -d '{
-              "alder": 35,
-              "manadskostnad": 399.0,
-              "manader_som_kund": 24,
-              "abonnemang": "Bas",
-              "region": "Stockholm",
-              "data_gb_per_manad": 15.0,
-              "supportarenden_12m": 1
-            }' \
-            | python -c '
-          import json
-          import sys
-          response = json.load(sys.stdin)
-          assert 0 <= response["sannolikhet"] <= 1
-          assert response["model_version"]
-          '
+        echo "Testing /predict..."
 
-          echo "All smoke tests passed!"
+        curl -fsS -X POST http://localhost:8000/predict \
+          -H "Content-Type: application/json" \
+          -d '{
+            "alder": 35,
+            "manadskostnad": 399.0,
+            "manader_som_kund": 24,
+            "abonnemang": "Bas",
+            "region": "Stockholm",
+            "data_gb_per_manad": 15.0,
+            "supportarenden_12m": 1
+          }' \
+          | python -c '
+        import json
+        import sys
+        response = json.load(sys.stdin)
+        assert 0 <= response["sannolikhet"] <= 1
+        assert response["model_version"]
+        '
 
-      - name: Show Docker logs on failure
-        if: failure()
-        run: docker logs churn-api
+        echo "All smoke tests passed!"
+
+    - name: Show Docker logs on failure
+      if: failure()
+      run: docker logs churn-api
