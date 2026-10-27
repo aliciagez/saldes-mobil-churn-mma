@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - run: uv run pytest --ignore=tests/test_api_contract.py
+      - run: uv run pytest --ignore=tests/test_api_contract.py --ignore=tests/test_api_contract.py
 
   validera_data:
     runs-on: ubuntu-24.04
