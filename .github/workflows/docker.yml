@@ -60,6 +60,11 @@ jobs:
            username: "${{ github.actor }}"
            password: "${{ secrets.GITHUB_TOKEN }}" 
 
+      - name: docker bulidx
+        uses: docker/setup-buildx-actions@v4
+        with:
+          driver: docker-container     
+
       - name: push to ghcr          
         uses: docker/build-push-action@v7
         with:
