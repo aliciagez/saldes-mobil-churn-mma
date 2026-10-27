@@ -48,7 +48,7 @@ jobs:
       
 
       - name: run smoketest
-        run: uv run pytest tests/test_smoke.py -v
+        run: uv run --extra dev pytest tests/test_smoke.py -v
 
       - name: show docker fails 
         if: failure()
