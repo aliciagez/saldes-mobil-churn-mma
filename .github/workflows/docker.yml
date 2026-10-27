@@ -43,4 +43,11 @@ jobs:
           done
           exit 1
 
+      - name: run smoketest
+        run: uv run pytest test/test_smoke.py -v
+
+      - name: show docker fails 
+        if: failure()
+        run: docker logs churn-api
+
  
