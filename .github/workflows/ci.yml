@@ -157,7 +157,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-      packges: write
+      packages: write
     
      
 
