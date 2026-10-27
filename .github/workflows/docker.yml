@@ -3,9 +3,9 @@ name: Docker - Build, Smoke Test and GHCR
 on:
   workflow_call:
 
-  jobs:
-    build-and-smoke-test:
-     runs-on: ubuntu-24.04
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
