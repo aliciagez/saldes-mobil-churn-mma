@@ -151,6 +151,13 @@ jobs:
       - name: Run API contract tests
         run: uv run pytest tests/test_api_contract.py -v
 
+  docker:
+    needs: [versionera_modell, api_contract_tests]
+    uses: ./.github/workflows/docker.yml
+    permissions:
+      contents: read
+      actions: read
+     
 
   ringlista:
     needs: versionera_modell 

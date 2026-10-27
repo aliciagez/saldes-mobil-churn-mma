@@ -2,16 +2,16 @@ FROM python:3.11-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /bin/uv
 
-
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
-
 
 ENV UV_PYTHON_DOWNLOADS=0
 
-COPY src / ./src/
+COPY pyproject.toml uv.lock ./
+
+COPY src/ ./src/
+
 RUN uv sync --locked --no-dev
-COPY approved_models/ /app/approved_models/
+
 
 
 FROM python:3.11-slim
@@ -22,10 +22,15 @@ WORKDIR /app
 
 COPY --from=builder /app/.venv /app/.venv
 
-COPY approved_models/ /app/approved_models/
+COPY --from=builder /app/src /app/src
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+ENV PYTHONPATH="app/src"
+
+COPY approved-model/ approved-model/
 
 USER app
-
 
 EXPOSE  8000
 
