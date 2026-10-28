@@ -1,7 +1,11 @@
 name: Docker - Build, Smoke Test and GHCR
 
 on:
-  workflow_call:
+  push: 
+     branches: [main]
+  pull_request:
+   branches: [main]
+  workflow_dispatch: 
 
 jobs:
   build-and-smoke-test:
