@@ -1,76 +1,114 @@
-# Churnmodellen – Saldes Mobil AB
 
-> *Saldes Mobil AB är ett påhittat företag och all kunddata är fiktiv. Repot är en övning i
-> kursen Kontinuerlig integration och leverans (MLOps25, Nackademin).*
+# Churnmodellen – Saldes Mobil-Churn-MMA
 
-## Välkommen till teamet
+## Om vårt grupparbete
 
-Hej och välkommen!
+I den här laborationen bygger vi vidare på en övning från läraren, Saldes Mobil-Churn. Vårt uppdrag är att bygga en CI/CD-pipeline som automatiskt testar, validerar, versionerar och paketerar en ML-modell.
 
-Kul att du börjar hos oss som MLOps-ingenjör. Här är bakgrunden till ditt första uppdrag.
+Syftet är att vi ska lära oss hur ett MLOps-team arbetar i praktiken.
 
-Vi tappar kunder. Analysteamet har byggt en modell som förutsäger vilka kunder som riskerar
-att säga upp sitt abonnemang. Varje måndag får kundtjänst en **ringlista** med de kunder som
-har högst risk, och ringer dem med ett erbjudande.
+En viktig grundregel är att alla ändringar ska gå via Pull Requests (PR), där vi granskar varandras arbete innan ändringarna mergas till `main`.
 
-I dag sköts det mesta för hand. Modellen tränas på en dator här på kontoret, och modellfilen
-ligger incheckad i `models/`. Ringlistan gör någon varje måndag morgon med kommandona nedan.
-Vi har ett CI-workflow, men det kör allt i ett enda jobb, installerar om alla paket vid
-varje push och testar på en annan Python-version än servern som gör ringlistan (3.11).
-Sedan förra veckan är det dessutom rött, och ingen har hunnit ta reda på varför.
+Vi har delat upp arbetet mellan gruppmedlemmarna. Mer information om vårt arbetssätt finns i dokumentet **Way of Working** i repositoryt.
 
-För två veckor sedan gick det riktigt fel. Kundtjänst fick en ringlista från en modell som
-var sämre än den förra. Ingen märkte det förrän säljarna klagade, och ingen kunde säga vilken
-commit eller vilken data modellen kom från.
-
-**Ditt uppdrag:** se till att bara en testad modell med känd härkomst kan bli en ringlista.
-Jag har skrivit ärenden åt dig, se *Kom igång* nedan.
-
-Två regler:
-
-- Ändra inte modellen, datan eller feature-koden i `src/churn/data.py`. Den sköter
-  analysteamet. Ditt arbete är workflows, tester och inställningar i repot.
-- Ingen pushar direkt till main när vi väl har skydd på plats. Allt går via pull requests.
-
-Lycka till, och fråga hellre en gång för mycket.
-
-*Teamleaden*
-
-## Kom igång
-
-1. Skapa ditt eget repo från mallen: **Use this template → Create a new repository**.
-   Välj ditt eget konto och **Public**.
-2. Klona det och skapa ärendena som issues (kräver `gh auth login`):
-
-   ```bash
-   git clone https://github.com/<ditt-användarnamn>/<ditt-repo>.git
-   cd <ditt-repo>
-   bash arenden/skapa.sh
-   ```
-
-3. Öppna fliken **Actions** och titta på den första körningen. Börja med ärende F1.
+Vi använder även Kanban i Tabula för att fördela uppgifter och följa varandras framsteg.
 
 ## Så kör man det lokalt
 
+### Installera beroenden
+
+Projektet använder `uv` och Python 3.11 i CI.
+
 ```bash
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-pytest                          # testerna
-python -m churn.model           # tränar, skriver outputs/modell.joblib och outputs/matvarden.json
-python -m churn.evaluate        # kvalitetsgrind: felkod om ROC AUC är under tröskeln
-python -m churn.score           # skriver outputs/ringlista.csv
+uv sync --frozen --extra dev
 ```
 
-## Vad som finns här
+### Kör tester
 
-| Sökväg | Innehåll |
-| --- | --- |
-| `data/kundbas.csv` | 2 000 kunder: ålder, region, abonnemang, kostnad, dataförbrukning, supportärenden och om kunden avslutat (`avslutat`) |
-| `src/churn/data.py` | Inläsning och features |
-| `src/churn/model.py` | Träning. Skriver modell och mätvärden till `outputs/` |
-| `src/churn/evaluate.py` | Kvalitetsgrind på mätvärdena |
-| `src/churn/score.py` | Ringlistan |
-| `tests/` | Tester på tre nivåer: kod, data och modell |
-| `models/modell.joblib` | Modellen som kundtjänst använder just nu |
-| `arenden/` | Ärendena, och `skapa.sh` som gör dem till issues |
-| `.github/workflows/ci.yml` | Vårt CI |
+```bash
+uv run --extra dev pytest -v
+```
+
+### Träna och utvärdera modellen
+
+```bash
+uv run python -m churn.model
+uv run python -m churn.evaluate
+```
+
+### Kör FastAPI lokalt
+
+1. Ladda ner artefakten `approved-modell-<sha>` från GitHub Actions.
+2. Packa upp filerna `modell.joblib` (modell) och `matvarden.json` (mätvärden).
+3. Placera dem i `approved-model/` i projektets rotmapp.
+
+Starta sedan API:et med följande kommando:
+
+```bash
+uv run uvicorn churn.app:app --reload
+```
+
+Dokumentationen hittar du här: http://127.0.0.1:8000/docs
+
+### Endpoints
+
+`GET /health`: Testar om API:et har startat och ska returnera `"status": "ok"`.
+
+`POST /predict`: Modellen gör en beräkning och returnerar sannolikhet samt `model_version`.
+
+```json
+{
+  "sannolikhet": 0.78,
+  "model_version": "a87a8d5..."
+}
+```
+
+### Kör API-kontrakttester
+
+```bash
+uv run --extra dev pytest tests/test_api_contract.py -v
+```
+
+## Kör applikationen med Docker
+
+I detta projekt använder vi Docker för att paketera FastAPI-applikationen, den godkända ML-modellen och dess beroenden i en container.
+
+För att köra applikationen med Docker:
+
+1. Se till att Docker Desktop är igång samt att mappen `approved-model/` innehåller modellfilerna `matvarden.json` och `modell.joblib`.
+
+### Bygg Docker-imagen från projektets rotmapp
+
+```bash
+docker build -t churn-api .
+```
+
+### Starta containern
+
+```bash
+docker run --rm -p 8000:8000 churn-api
+```
+
+## Docker, smoke tests och GHCR i CI/CD
+
+GitHub Actions testar och bygger Docker-imagen automatiskt som en del av vår CI/CD-pipeline.
+
+### Smoke tests
+
+När containern startas väntar workflowen tills endpointen `/health` svarar. Därefter körs:
+
+```bash
+uv run --extra dev pytest tests/test_smoke.py -v
+```
+
+Smoke tests är tester som kontrollerar att API:ets grundläggande funktioner fungerar efter att det har startats. Om ett test inte går igenom avbryts jobbet och containerloggar visas för felsökning.
+
+### Publicering till GHCR
+
+Vårt projekt använder GitHub Container Registry (GHCR) för att lagra Docker Images.
+
+Workflowen loggar in på GHCR med hjälp av GitHubs inbyggda `GITHUB_TOKEN`.
+
+När workflowen körs från `main` publiceras imagen med en tagg som representerar den aktuella commit-SHA:n.
+
+Detta gör att vi kan identifiera vilken kodversion som finns i varje publicerad image.
