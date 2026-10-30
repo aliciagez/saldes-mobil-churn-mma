@@ -4,6 +4,7 @@ outputs/
 # Modellfiler
 models/
 *.joblib
+approved-model/
 
 # Python
 __pycache__/
@@ -28,3 +29,5 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+approved_models/
+
