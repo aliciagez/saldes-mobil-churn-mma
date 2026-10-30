@@ -14,9 +14,11 @@ We work with separate branches and pull requests. All changes should be reviewed
 
 **Pipeline flow:**
 
-Code tests + Data validation → Model training → Model evaluation → Approved model versioning → Customer call list
+Code tests + Data validation → Model training → Model evaluation → Approved model versioning → API contract tests → Docker build → Smoke tests → GHCR publishing
 
-Docker packaging and GHCR publishing will be added to the pipeline.
+The customer call list is generated separately on `main` after model approval.
+
+Docker packaging, smoke testing and GHCR publishing are integrated into our CI/CD pipeline.
 
 ## 2. Workflow Triggers
 
@@ -122,6 +124,8 @@ The later jobs follow the same principle:
 
 - `utvardera` depends on `train`.
 - `versionera_modell` depends on `utvardera`.
+- `ringlista` depends on `versionera_modell`.
+- `docker` depends on `versionera_modell` and `api_contract_tests`.
 - `ringlista` depends on `versionera_modell`.
 
 **Why?** This ensures that failed tests, invalid datasets and models that do not pass evaluation cannot continue through the dependent pipeline jobs.
@@ -241,6 +245,28 @@ The model can be traced back to the source code and training data.
 
 A GitHub Actions artifact is a stored workflow output, not a full model registry such as MLflow.
 
+### 8.1 API Contract Tests
+
+**Job:** `api_contract_tests`  
+**File:** `tests/test_api_contract.py`
+
+This job runs after the model has been approved.
+
+It downloads the approved model into `approved-model/` and uses pytest with FastAPI TestClient.
+
+The tests verify:
+
+- `/health` returns HTTP 200 and status "ok".
+- `/predict` rejects invalid input with HTTP 422.
+- `/predict` accepts valid customer data and returns a probability between 0 and 1.
+- The response includes a non-empty `model_version`.
+
+The tests run with:
+
+`uv run pytest tests/test_api_contract.py -v`
+
+**Why?** Contract tests verify that the API accepts and returns the expected data before the model is packaged into Docker.
+
 ## 9. Reproducibility and Dependency Management
 
 **File:** `.github/actions/setup/action.yml`
@@ -318,32 +344,55 @@ The ring list is uploaded as a GitHub Actions artifact.
 
 ## 11. Docker and Smoke Test
 
-**Status: TODO Awaiting Alicia's Docker implementation**
+**Workflow:** `.github/workflows/docker.yml`  
+**Test file:** `tests/test_smoke.py`
 
-This section will explain:
+The Docker job runs after model approval and successful API contract tests.
 
-- Which base image we use.
-- How the Dockerfile installs dependencies.
-- How the approved model is included.
-- How the Docker image is built.
-- How the smoke test verifies that the model works inside the container.
-- What happens if the smoke test fails.
+It downloads the approved model into `approved-model/` and builds a Docker image using a multi-stage Dockerfile with Python 3.11-slim.
 
-**Why?** A smoke test checks that the packaged application works at a basic level before publication.
+The container runs FastAPI on port 8000.
+
+### Smoke Tests
+
+The workflow starts the Docker container and waits for `/health` to respond.
+
+It then runs:
+
+`uv run --extra dev pytest tests/test_smoke.py -v`
+
+The smoke tests use `requests` to test the running container.
+
+They verify that:
+
+- `/health` returns HTTP 200 and status "ok".
+- `/predict` returns HTTP 200 for valid customer data.
+- The probability is between 0 and 1.
+- `model_version` is included in the response.
+
+If a test fails, the job stops and Docker logs are displayed.
+
+**Why?** Smoke tests verify that the packaged application actually works inside Docker, not just through FastAPI TestClient.
 
 ## 12. GitHub Container Registry (GHCR)
 
-**Status: TODO Awaiting GHCR implementation**
+**Workflow:** `.github/workflows/docker.yml`
 
-This section will describe:
+After the Docker build and smoke tests pass, the workflow publishes a Docker image to GitHub Container Registry (GHCR).
 
-- How Docker images are tagged.
-- How GitHub Actions authenticates to GHCR.
-- Which permissions are required.
-- How the tested image is published.
-- How the image can be traced to the approved model and commit.
+### How it works
 
-**Why?** GHCR stores the Docker image so it can later be downloaded and deployed.
+- `docker/login-action@v4` logs in to GHCR using `GITHUB_TOKEN`.
+- `docker/setup-buildx-action@v4` configures Docker Buildx.
+- `docker/build-push-action@v7` builds and publishes the image.
+- `packages: write` gives GitHub Actions permission to publish packages.
+- Publishing is enabled only on `main`.
+
+The image is tagged with `${{ github.sha }}` to identify the Git commit used.
+
+The current workflow builds an image for smoke testing and then builds another image for GHCR publishing.
+
+**Why?** GHCR stores versioned Docker images that can be downloaded and used for deployment. SHA tagging provides traceability.
 
 ## 13. Pull Requests and Branch Protection
 
@@ -405,6 +454,6 @@ Version pinning, dependency locking and caching support reproducibility and effi
 
 Model artifacts preserve traceability through commit identifiers and data hashes.
 
-Docker and GHCR will complete the model packaging and publication stages.
+Docker and GHCR complete the model packaging and publication stages, with automated smoke tests verifying that the containerized API works before publication.
 
 The overall goal is to create a reliable and maintainable MLOps workflow.
